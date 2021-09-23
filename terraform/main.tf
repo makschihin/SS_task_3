@@ -1,5 +1,6 @@
 locals {
-  mysql_url  = "jdbc:mysql://${aws_db_instance.default.endpoint}/${var.rds_db_name}?allowPublicKeyRetrieval=true&useSSL=false"
+  #mysql_url  = "jdbc:mysql://${aws_db_instance.default.endpoint}/${var.rds_db_name}?allowPublicKeyRetrieval=true&useSSL=false"
+  mysql_url  = "1"
   mysql_user = var.rds_user
   mysql_pass = var.rds_user_password
   image_path = var.image_path
@@ -54,7 +55,7 @@ resource "aws_lb_target_group" "ecs_task" {
   target_type = "ip"
   health_check {
     enabled  = true
-    interval = 15
+    interval = 300
     path     = "/"
     port     = "8080"
     protocol = "HTTP"
@@ -104,8 +105,8 @@ resource "aws_ecs_task_definition" "ecs_task" {
   family = "ecs_task"
   network_mode = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu       = 512
-  memory    = 1024
+  cpu       = 256
+  memory    = 512
   execution_role_arn = aws_iam_role.ecsTaskExecutionRole.arn
   container_definitions = jsonencode([
     {
@@ -145,17 +146,20 @@ resource "aws_security_group" "ecs_task_task" {
   name        = "${var.name}-task-security-group"
   vpc_id      = aws_vpc.new_vpc.id
 
-  ingress {
-    protocol        = "tcp"
-    from_port       = 8080
-    to_port         = 8080
-    security_groups = [aws_security_group.lb.id]
+  dynamic "ingress" {
+    for_each = ["22", "80", "8080"]
+    content {
+      description = "SSH and HTTP to Front"
+      from_port   = ingress.value
+      to_port     = ingress.value
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
   }
-
   egress {
-    protocol    = "-1"
     from_port   = 0
     to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
@@ -186,7 +190,7 @@ resource "aws_ecs_service" "ecs_task" {
 
   depends_on = [aws_lb_listener.ecs_task]
 }
-
+/*
 #############################################################################
 # RDS
 #############################################################################
@@ -238,4 +242,4 @@ vpc_security_group_ids = [ aws_security_group.rds-sg.id ]
 publicly_accessible  = false
 skip_final_snapshot  = true
 multi_az             = false
-}
+}*/
