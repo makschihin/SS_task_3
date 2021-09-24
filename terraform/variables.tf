@@ -56,6 +56,13 @@ variable "rds_user_password" {
   description = "RDS user password"
 }
 
+variable "public_sub_1" {
+  description = "Public subnet 1"
+}
+
+variable "public_sub_2" {
+  description = "Public subnet 2"
+}
 variable "private_subnet_1" {
   description = "Private Subnets"
 }

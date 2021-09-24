@@ -1,7 +1,6 @@
 locals {
-  #mysql_url  = "jdbc:mysql://${aws_db_instance.default.endpoint}/${var.rds_db_name}?allowPublicKeyRetrieval=true&useSSL=false"
-  mysql_url  = "1"
-  mysql_user = var.rds_user
+  mysql_url  = "jdbc:mysql://${aws_db_instance.default.endpoint}/${var.rds_db_name}?allowPublicKeyRetrieval=true&useSSL=false"
+   mysql_user = var.rds_user
   mysql_pass = var.rds_user_password
   image_path = var.image_path
 }
@@ -16,35 +15,16 @@ data "aws_availability_zones" "available_zones" {
 ####
 #Load balancer
 ####
-#Security group
-resource "aws_security_group" "lb" {
-  name        = "${var.name}-alb-security-group"
-  vpc_id      = aws_vpc.new_vpc.id
-
-  ingress {
-    protocol    = "tcp"
-    from_port   = 80
-    to_port     = 80
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
 #Defines the load balancer itself and attaches it to 
 #the public subnet in each availability zone with the
 #load balancer security group.
 resource "aws_lb" "pet-lb" {
   name               = "${var.name}-lb"
   internal           = false
-  subnets            = aws_subnet.public.*.id
+  subnets            = [aws_subnet.public_sub_1.id, aws_subnet.public_sub_2.id]
+  #subnets            = aws_subnet.public.*.id
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.lb.id]
+  security_groups    = [aws_security_group.ecs_task_task.id]
 }
 
 resource "aws_lb_target_group" "ecs_task" {
@@ -55,17 +35,17 @@ resource "aws_lb_target_group" "ecs_task" {
   target_type = "ip"
   health_check {
     enabled  = true
-    interval = 300
+    interval = 15
     path     = "/"
-    port     = "8080"
+    port     = 8080
     protocol = "HTTP"
-    matcher  = "200-299"
+    matcher  = "200"
   }
 }
 
 resource "aws_lb_listener" "ecs_task" {
   load_balancer_arn = aws_lb.pet-lb.arn
-  port              = "80"
+  port              = 80
   protocol          = "HTTP"
 
   default_action {
@@ -102,11 +82,11 @@ resource "aws_iam_role_policy_attachment" "ecsTaskExecutionRole_policy" {
 #ECS
 ####
 resource "aws_ecs_task_definition" "ecs_task" {
-  family = "ecs_task"
+  family = "service"
   network_mode = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu       = 256
-  memory    = 512
+  cpu       = 512
+  memory    = 1024
   execution_role_arn = aws_iam_role.ecsTaskExecutionRole.arn
   container_definitions = jsonencode([
     {
@@ -149,7 +129,6 @@ resource "aws_security_group" "ecs_task_task" {
   dynamic "ingress" {
     for_each = ["22", "80", "8080"]
     content {
-      description = "SSH and HTTP to Front"
       from_port   = ingress.value
       to_port     = ingress.value
       protocol    = "tcp"
@@ -178,19 +157,20 @@ resource "aws_ecs_service" "ecs_task" {
 
   network_configuration {
     security_groups  = [aws_security_group.ecs_task_task.id]
-    subnets          = aws_subnet.public.*.id
+    subnets          = [aws_subnet.public_sub_1.id, aws_subnet.public_sub_2.id] 
+    #subnets          = aws_subnet.public.*.id
     assign_public_ip = true
   }
 
   load_balancer {
-    target_group_arn = aws_lb_target_group.ecs_task.id
+    target_group_arn = aws_lb_target_group.ecs_task.arn
     container_name   = "ecs-task-container"
     container_port   = 8080
   }
 
-  depends_on = [aws_lb_listener.ecs_task]
+  #depends_on = [aws_lb_listener.ecs_task]
 }
-/*
+
 #############################################################################
 # RDS
 #############################################################################
@@ -242,4 +222,4 @@ vpc_security_group_ids = [ aws_security_group.rds-sg.id ]
 publicly_accessible  = false
 skip_final_snapshot  = true
 multi_az             = false
-}*/
+}
