@@ -7,6 +7,10 @@ variable "name" {
     description = "Name of resource"
     default     = "test"
 }
+
+variable "dd_api_key" {
+  description = "DD_API_KEY"
+}
 variable "def_vpc" {
     description = "VPC cidr block"  
     default     = "10.32.0.0/16"

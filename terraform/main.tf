@@ -1,8 +1,9 @@
 locals {
   mysql_url  = "jdbc:mysql://${aws_db_instance.default.endpoint}/${var.rds_db_name}?allowPublicKeyRetrieval=true&useSSL=false"
-   mysql_user = var.rds_user
+  mysql_user = var.rds_user
   mysql_pass = var.rds_user_password
   image_path = var.image_path
+  apikey     = var.dd_api_key
 }
 
 ####
@@ -92,6 +93,11 @@ resource "aws_ecs_task_definition" "ecs_task" {
     {
       name      = "ecs-task-container"
       image     = "${local.image_path}:latest"
+      dockerLabels = {
+            "com.datadoghq.ad.instances": "[{\"host\": \"%%host%%\", \"port\": 8080}]",
+            "com.datadoghq.ad.check_names": "[\"ecs-task-container\"]",
+            "com.datadoghq.ad.init_configs": "[{}]"
+        }
       essential = true
       environment = [
         {
@@ -117,6 +123,20 @@ resource "aws_ecs_task_definition" "ecs_task" {
           # hostPort      = 8080
         }
       ]
+    },
+    {
+      name = "datadog-agent"
+      image = "datadog/agent:latest"
+      environment = [
+        {
+          name = "DD_API_KEY"
+          value = local.apikey
+        },
+        {
+            "name": "ECS_FARGATE",
+            "value": "true"
+        }
+        ]
     }
   ])
 }

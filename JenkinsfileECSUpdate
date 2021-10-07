@@ -1,0 +1,13 @@
+pipeline{
+  agent any
+  stages{
+      stage("Update ECS task") {
+          steps{
+            withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "my.aws.credentials", accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                sh '''export TASK_ECS=\$(docker run --env AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY amazon/aws-cli ecs list-tasks --cluster test-cluster --service ecs-task-service --region us-east-2 --output text --query taskArns[0]);  \
+                   docker run --env AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID --env AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY amazon/aws-cli ecs stop-task --cluster test-cluster --region us-east-2 --task \$TASK_ECS'''
+            }
+          }
+        }
+    }
+}
