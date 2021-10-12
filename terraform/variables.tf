@@ -8,9 +8,18 @@ variable "name" {
     default     = "test"
 }
 
+variable "api_url" {
+  description = "The API URL"
+}
+
 variable "dd_api_key" {
   description = "DD_API_KEY"
 }
+
+variable "dd_app_key" {
+  description = "DD_APP_KEY"
+}
+
 variable "def_vpc" {
     description = "VPC cidr block"  
     default     = "10.32.0.0/16"
@@ -20,6 +29,7 @@ variable "image_path" {
     description = "Path to the image"
     default     = ""
 }
+
 variable "app_count" {
     description = "Count of app"
     type        = number

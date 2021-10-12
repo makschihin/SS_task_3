@@ -25,12 +25,14 @@ resource "aws_subnet" "public_sub_1" {
   vpc_id = aws_vpc.new_vpc.id
   cidr_block = var.public_sub_1
   availability_zone = var.private1_az
+  map_public_ip_on_launch = true #for test
 }
 
 resource "aws_subnet" "public_sub_2" {
   vpc_id = aws_vpc.new_vpc.id
   cidr_block = var.public_sub_2
   availability_zone = var.private2_az
+  map_public_ip_on_launch = true #for test
 }
 # Privat subnets
 resource "aws_subnet" "private_sub_1" {
@@ -67,7 +69,7 @@ resource "aws_route_table_association" "PublicRTassociation_2" {
 }
 
 # Route table for Private Subnets
-resource "aws_route_table" "privateRT" {
+/*resource "aws_route_table" "privateRT" {
   vpc_id = aws_vpc.new_vpc.id
   route {
     cidr_block     = "0.0.0.0/0"
@@ -97,7 +99,7 @@ resource "aws_nat_gateway" "NATgw" {
   allocation_id = aws_eip.nateIP.id
   subnet_id     = aws_subnet.public_sub_1.id
 }
-
+*/
 /*resource "aws_eip" "gateway" {
   count      = 2
   vpc        = true

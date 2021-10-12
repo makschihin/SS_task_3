@@ -1,5 +1,5 @@
 locals {
-  mysql_url  = "jdbc:mysql://${aws_db_instance.default.endpoint}/${var.rds_db_name}?allowPublicKeyRetrieval=true&useSSL=false"
+  #mysql_url  = "jdbc:mysql://${aws_db_instance.default.endpoint}/${var.rds_db_name}?allowPublicKeyRetrieval=true&useSSL=false"
   mysql_user = var.rds_user
   mysql_pass = var.rds_user_password
   image_path = var.image_path
@@ -36,7 +36,7 @@ resource "aws_lb_target_group" "ecs_task" {
   target_type = "ip"
   health_check {
     enabled  = true
-    interval = 15
+    interval = 30
     path     = "/"
     port     = 8080
     protocol = "HTTP"
@@ -93,13 +93,13 @@ resource "aws_ecs_task_definition" "ecs_task" {
     {
       name      = "ecs-task-container"
       image     = "${local.image_path}:latest"
-      dockerLabels = {
+      /*dockerLabels = {
             "com.datadoghq.ad.instances": "[{\"host\": \"%%host%%\", \"port\": 8080}]",
             "com.datadoghq.ad.check_names": "[\"ecs-task-container\"]",
             "com.datadoghq.ad.init_configs": "[{}]"
-        }
+        }*/
       essential = true
-      environment = [
+     /* environment = [
         {
             name = "MYSQL_USER"
             value = local.mysql_user
@@ -116,13 +116,39 @@ resource "aws_ecs_task_definition" "ecs_task" {
             name = "spring_profiles_active"
             value = "mysql"
         }
-      ]
+      ]*/
       portMappings = [
         {
           containerPort = 8080
           # hostPort      = 8080
         }
-      ]
+      ],
+     firelensConfiguration = null
+     logConfiguration = {
+       logDriver = "awsfirelens"
+       options = {
+        dd_message_key = "log"
+        apikey = local.apikey
+        provider = "ecs"
+        dd_service = "ecs-task"
+        dd_source = "httpd"
+        Host = "http-intake.logs.datadoghq.eu"
+        TLS = "on"
+        dd_tags = "project:fluent-bit"
+        Name = "datadog"
+        }
+      }
+    },
+    {
+      name = "log_router"
+      image = "amazon/aws-for-fluent-bit"
+      logConfiguration = null
+      firelensConfiguration = {
+        type = "fluentbit"
+        options = {
+          enable-ecs-log-metadata = "true"
+        }
+      }
     },
     {
       name = "datadog-agent"
@@ -132,9 +158,13 @@ resource "aws_ecs_task_definition" "ecs_task" {
           name = "DD_API_KEY"
           value = local.apikey
         },
+        { 
+          name = "DD_SITE"
+          value = "datadoghq.eu"
+        },
         {
-            "name": "ECS_FARGATE",
-            "value": "true"
+          name = "ECS_FARGATE"
+          value = "true"
         }
         ]
     }
@@ -147,7 +177,7 @@ resource "aws_security_group" "ecs_task_task" {
   vpc_id      = aws_vpc.new_vpc.id
 
   dynamic "ingress" {
-    for_each = ["22", "80", "8080"]
+    for_each = ["22", "80", "8080", "8125", "8126"]
     content {
       from_port   = ingress.value
       to_port     = ingress.value
@@ -195,7 +225,7 @@ resource "aws_ecs_service" "ecs_task" {
 # RDS
 #############################################################################
 # DB subnet group
-resource "aws_db_subnet_group" "testRDS" {
+/*resource "aws_db_subnet_group" "testRDS" {
   name = "testrds"
   subnet_ids = [aws_subnet.private_sub_1.id, aws_subnet.private_sub_2.id]
 }
@@ -242,4 +272,18 @@ vpc_security_group_ids = [ aws_security_group.rds-sg.id ]
 publicly_accessible  = false
 skip_final_snapshot  = true
 multi_az             = false
+}*/
+
+# Create a new Datadog monitor
+resource "datadog_monitor" "loadbalacer_anomalous" {
+  name    = "Anomalous response LB"
+  type    = "query alert"
+  message = "Something "
+  query   = "avg(last_10m):avg:aws.applicationelb.target_response_time.maximum{region:us-east-2} by {loadbalancer} > 3"
+  monitor_thresholds {
+    critical          = 3.0
+    critical_recovery = 2.5
+		warning           = 2.0
+		warning_recovery  = 1.5
+  }
 }
