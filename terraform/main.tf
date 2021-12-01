@@ -1,5 +1,5 @@
 locals {
-  #mysql_url  = "jdbc:mysql://${aws_db_instance.default.endpoint}/${var.rds_db_name}?allowPublicKeyRetrieval=true&useSSL=false"
+  mysql_url  = "jdbc:mysql://${aws_db_instance.default.endpoint}/${var.rds_db_name}?allowPublicKeyRetrieval=true&useSSL=false"
   mysql_user = var.rds_user
   mysql_pass = var.rds_user_password
   image_path = var.image_path
