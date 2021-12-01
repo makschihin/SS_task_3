@@ -99,7 +99,7 @@ resource "aws_ecs_task_definition" "ecs_task" {
             "com.datadoghq.ad.init_configs": "[{}]"
         }*/
       essential = true
-     /* environment = [
+      environment = [
         {
             name = "MYSQL_USER"
             value = local.mysql_user
@@ -116,7 +116,7 @@ resource "aws_ecs_task_definition" "ecs_task" {
             name = "spring_profiles_active"
             value = "mysql"
         }
-      ]*/
+      ]
       portMappings = [
         {
           containerPort = 8080
@@ -225,7 +225,7 @@ resource "aws_ecs_service" "ecs_task" {
 # RDS
 #############################################################################
 # DB subnet group
-/*resource "aws_db_subnet_group" "testRDS" {
+resource "aws_db_subnet_group" "testRDS" {
   name = "testrds"
   subnet_ids = [aws_subnet.private_sub_1.id, aws_subnet.private_sub_2.id]
 }
@@ -272,7 +272,7 @@ vpc_security_group_ids = [ aws_security_group.rds-sg.id ]
 publicly_accessible  = false
 skip_final_snapshot  = true
 multi_az             = false
-}*/
+}
 
 # Create a new Datadog monitor
 resource "datadog_monitor" "loadbalacer_anomalous" {
